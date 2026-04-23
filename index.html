@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CAT KESEHATAN JIWA | Restricted Access</title>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #050533; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .lock-card { background: white; color: #333; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-width: 400px; }
+        .status-badge { padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 12px; margin-bottom: 20px; display: inline-block; }
+        .expired { background: #FEE2E2; color: #B91C1C; }
+        .active { background: #DCFCE7; color: #166534; }
+        .btn-access { background: #C5A059; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: 800; width: 100%; text-transform: uppercase; margin-top: 20px; }
+        .btn-access:disabled { background: #CBD5E1; cursor: not-allowed; }
+        .info { font-size: 11px; color: #64748B; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="lock-card">
+    <div id="statusBadge" class="status-badge">OTORISASI...</div>
+    <h2 style="margin: 10px 0;">Sistem CAT KESWA</h2>
+    <p id="msg">Memverifikasi lisensi perangkat dan masa aktif...</p>
+    
+    <button id="entryBtn" class="btn-access" style="display:none;" onclick="enterSystem()">MASUK APLIKASI</button>
+    
+    <div class="info">
+        ID Perangkat: <span id="deviceId">Memuat...</span><br>
+        Lisensi Berakhir: <b>07 Mei 2026</b>
+    </div>
+</div>
+
+<script>
+    // KONFIGURASI
+    const EXPIRY_DATE = new Date('2026-05-07T23:59:59');
+    const MAX_DEVICES = 5;
+    const REDIRECT_URL = 'fix2mmpi.html'; // Nama file MMPI Anda
+
+    function getFingerprint() {
+        // Simple fingerprinting menggunakan data browser
+        return btoa(navigator.userAgent + navigator.language + screen.width).substring(0, 12);
+    }
+
+    function checkAccess() {
+        const now = new Date();
+        const badge = document.getElementById('statusBadge');
+        const msg = document.getElementById('msg');
+        const btn = document.getElementById('entryBtn');
+        const devLabel = document.getElementById('deviceId');
+        
+        const fingerprint = getFingerprint();
+        devLabel.innerText = fingerprint;
+
+        // 1. Cek Expired
+        if (now > EXPIRY_DATE) {
+            badge.innerText = "LISENSI KADALUWARSA";
+            badge.className = "status-badge expired";
+            msg.innerText = "Masa berlaku trial 2 minggu telah habis. Silakan hubungi administrator.";
+            return;
+        }
+
+        // 2. Cek Limit Device (Simulasi via Cloud/Local)
+        // Catatan: Untuk akurasi 100%, limit device memerlukan Database.
+        // Ini adalah pengamanan sisi klien menggunakan localStorage.
+        let devices = JSON.parse(localStorage.getItem('registered_devices') || '[]');
+        
+        if (!devices.includes(fingerprint)) {
+            if (devices.length >= MAX_DEVICES) {
+                badge.innerText = "LIMIT PERANGKAT TERCAPAI";
+                badge.className = "status-badge expired";
+                msg.innerText = "Maaf, akses hanya diizinkan untuk 5 perangkat pertama.";
+                return;
+            } else {
+                devices.push(fingerprint);
+                localStorage.setItem('registered_devices', JSON.stringify(devices));
+            }
+        }
+
+        // 3. Akses Diberikan
+        badge.innerText = "AKSES DIIZINKAN";
+        badge.className = "status-badge active";
+        msg.innerText = "Perangkat terverifikasi. Anda memiliki akses hingga 07 Mei 2026.";
+        btn.style.display = "block";
+    }
+
+    function enterSystem() {
+        window.location.href = REDIRECT_URL;
+    }
+
+    window.onload = checkAccess;
+</script>
+
+</body>
+</html>

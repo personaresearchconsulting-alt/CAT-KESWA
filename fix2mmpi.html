@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Persona Research & Consulting | MMPI-2 Unified Report</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --navy: #050533; --gold: #C5A059; --bg: #F1F5F9; --red: #B91C1C; --blue: #1D4ED8; --green: #047857; --slate: #475569; --border: #E2E8F0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); margin: 0; padding: 0; color: #1E293B; }
+        
+        /* UI Admin */
+        .no-print { text-align: center; padding: 40px 20px; }
+        .admin-box { max-width: 500px; margin: auto; background: var(--navy); padding: 40px; border-radius: 16px; color: white; border-bottom: 8px solid var(--gold); box-shadow: 0 10px 30px rgba(0,0,0,0.15); }
+        .gender-selector { display: flex; gap: 10px; margin: 20px 0; }
+        .gender-btn { flex: 1; padding: 12px; border: 2px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; background: transparent; color: white; font-weight: 700; }
+        .gender-btn.active { border-color: var(--gold); background: var(--gold); }
+        .upload-section { display: none; margin-top: 15px; }
+        .btn-prime { background: var(--gold); color: white; padding: 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: 800; width: 100%; text-transform: uppercase; }
+
+        /* Report Layout */
+        .report-page { max-width: 900px; margin: 20px auto; background: white; padding: 50px; display: none; border: 1px solid var(--border); }
+        .header { border-bottom: 3px solid var(--navy); margin-bottom: 25px; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .brand-sub { color: var(--gold); font-weight: 800; font-size: 11px; text-transform: uppercase; margin: 0; }
+        
+        .validity-banner { padding: 12px; border-radius: 4px; margin-bottom: 20px; font-weight: 800; text-align: center; font-size: 14px; }
+        .valid { background: #ECFDF5; color: var(--green); border: 1px solid #10B981; }
+        .invalid { background: #FEF2F2; color: var(--red); border: 1px solid #EF4444; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 25px; }
+        th { background: #F8FAFC; border: 1px solid #CBD5E0; padding: 10px; color: var(--navy); }
+        td { border: 1px solid #CBD5E0; padding: 8px; text-align: center; }
+        .col-left { text-align: left; padding-left: 12px; font-weight: 700; background: #F8FAFC; width: 220px; }
+        
+        .chart-wrapper { width: 100%; height: 350px; margin-bottom: 30px; border: 1px solid #F1F5F9; padding: 10px; border-radius: 8px; }
+
+        .interpretation-container { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+        .interp-row { display: grid; grid-template-columns: 200px 1fr; border-bottom: 1px solid var(--border); background: #FFF; }
+        .interp-row:last-child { border-bottom: none; }
+        
+        .interp-label { background: #F8FAFC; padding: 15px; border-right: 4px solid #CBD5E0; display: flex; flex-direction: column; justify-content: center; }
+        .interp-label h5 { margin: 0; font-size: 12px; color: var(--navy); font-weight: 800; }
+        .interp-label .t-score { font-size: 11px; font-weight: 700; color: var(--slate); margin-top: 4px; }
+
+        .interp-content { padding: 15px 20px; }
+        .interp-content p { margin: 0; font-size: 13.5px; line-height: 1.6; text-align: justify; color: #334155; }
+
+        .row-high { border-right-color: var(--red) !important; }
+        .row-normal { border-right-color: var(--green) !important; }
+        .row-low { border-right-color: var(--blue) !important; }
+
+        .legal-footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #EEE; font-size: 11px; color: #64748B; text-align: justify; }
+
+        @media print { 
+            .no-print { display: none !important; } 
+            .report-page { display: block !important; margin: 0; width: 100%; border: none; padding: 20px; }
+            .interp-row { grid-template-columns: 160px 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="admin-box no-print" id="adminPanel">
+        <h2 style="margin:0;">MMPI-2 AUDIT</h2>
+        <p class="brand-sub">PERSONA RESEARCH & CONSULTING</p>
+        
+        <div class="gender-selector">
+            <button class="gender-btn" onclick="setGender('L', this)">LAKI-LAKI</button>
+            <button class="gender-btn" onclick="setGender('P', this)">PEREMPUAN</button>
+        </div>
+
+        <div class="upload-section" id="uploadSec">
+            <input type="file" id="fileInput" accept=".txt" style="display:none;">
+            <button class="btn-prime" onclick="document.getElementById('fileInput').click()">PROSES DATA (.TXT)</button>
+        </div>
+    </div>
+
+    <div id="page1" class="report-page">
+        <div class="header">
+            <div><h1 style="margin:0; color:var(--navy); font-size:20px;">HASIL AUDIT MMPI-2</h1><p class="brand-sub">PERSONA RESEARCH & CONSULTING</p></div>
+            <div style="text-align:right; font-size:11px;">
+                NAMA: <span id="outNama" style="font-weight:800;"></span><br>
+                JK: <span id="outJK"></span> | TGL: <span id="outTgl"></span>
+            </div>
+        </div>
+        <div id="statusValiditas" class="validity-banner"></div>
+        <table>
+            <thead><tr><th class="col-left">SKALA KLINIS & VALIDITAS</th><th>YA</th><th>TDK</th><th>RS</th><th>K</th><th>FINAL</th><th style="background:#FFF9C4;">T-SKOR</th><th>STAT</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        <div class="chart-wrapper"><canvas id="mmpiChart"></canvas></div>
+    </div>
+
+    <div id="page2" class="report-page">
+        <div class="header"><h2 style="margin:0; color:var(--navy); font-size:18px;">INTERPRETASI NARATIF KOMPREHENSIF</h2></div>
+        <div id="clinicalNarasi" class="interpretation-container"></div>
+        <div class="legal-footer">
+            <b>PENTING: Laporan ini adalah dokumen medis/psikologis rahasia. Interpretasi yang tertera didasarkan pada norma MMPI-2 Indonesia yang telah divalidasi. Hasil ini <u>BUKAN</u> merupakan diagnosa mandiri melainkan data penunjang klinis. Interpretasi akhir dan penegakan diagnosa wajib dilakukan oleh <b>Psikolog Klinis atau Psikiater yang memiliki izin praktik (SIP/SIPPK)</b> yang sah melalui integrasi data observasi dan wawancara klinis.
+        </div>
+        <div class="no-print" style="margin-top:30px;"><button class="btn-prime" style="width:auto; padding: 12px 40px;" onclick="window.print()">CETAK LAPORAN</button></div>
+    </div>
+
+<script>
+    let currentGender = "";
+    function setGender(g, b) {
+        currentGender = g;
+        document.querySelectorAll('.gender-btn').forEach(btn => btn.classList.remove('active'));
+        b.classList.add('active');
+        document.getElementById('uploadSec').style.display = 'block';
+    }
+
+    const scoringKeys = {
+        'L': [16, 29, 41, 51, 66, 93, 102, 106, 123, 139, 153, 183, 203, 232, 255],
+        'F': [14, 22, 31, 38, 48, 56, 65, 73, 83, 92, 115, 146, 161, 215, 227, 248, 269, 280, 291, 310, 325],
+        'K': [30, 39, 71, 89, 124, 148, 160, 170, 180, 183, 196, 213, 234, 267, 290, 312, 338, 350, 361],
+        'Hs': [18, 28, 39, 53, 59, 97, 101, 111, 149, 175, 208, 224, 241, 253, 276, 288, 310, 325, 341, 355],
+        'D': [5, 15, 18, 27, 32, 41, 43, 52, 67, 76, 107, 118, 127, 132, 144, 158, 176, 189, 202, 215, 230, 242, 256],
+        'Hy': [11, 18, 31, 39, 44, 65, 101, 166, 172, 175, 188, 201, 218, 229, 245, 260, 281, 299, 315, 333, 351],
+        'Pd': [17, 21, 22, 24, 34, 35, 67, 74, 82, 91, 105, 119, 130, 145, 157, 171, 185, 204, 222, 239, 254, 271, 289],
+        'Mf': [4, 20, 37, 54, 70, 87, 103, 120, 136, 153, 169, 186, 202, 219, 235, 252, 268, 285, 301, 318],
+        'Pa': [16, 24, 35, 36, 40, 44, 70, 81, 98, 100, 114, 121, 133, 150, 166, 182, 199, 214, 235, 250],
+        'Pt': [11, 15, 16, 23, 31, 38, 43, 45, 47, 48, 62, 79, 94, 110, 125, 141, 159, 173, 191, 209, 225, 240, 257, 273],
+        'Sc': [16, 17, 21, 23, 31, 35, 38, 41, 45, 65, 88, 104, 126, 147, 168, 184, 207, 231, 258, 272, 295, 311, 332, 356],
+        'Ma': [13, 15, 21, 23, 31, 35, 38, 41, 45, 65, 82, 99, 117, 136, 155, 174, 190, 212, 233, 251, 268, 285],
+        'Si': [32, 67, 82, 111, 138, 151, 160, 170, 181, 195, 211, 230, 247, 265, 284, 302, 321, 340, 359, 370]
+    };
+
+    const dbNarrative = {
+        'L': { tinggi: "Subjek menunjukkan sikap sangat defensif dalam merespons item tes. Terindikasi adanya upaya sadar untuk meminimalkan kekurangan diri serta menampilkan profil moral yang tidak realistis (Faking Good).", normal: "Respon subjek menunjukkan tingkat keterbukaan yang wajar. Individu mampu mengakui kelemahan diri tanpa upaya distorsi yang signifikan.", rendah: "Subjek cenderung sangat terbuka, kritis terhadap diri sendiri, atau mungkin sedang mengalami tekanan emosional yang membuatnya mengabaikan norma sosial." },
+        'F': { tinggi: "Skor ini mengindikasikan adanya distres emosional yang hebat, kebingungan pikiran, atau kemungkinan subjek merasa kewalahan oleh beban psikologis yang sedang dihadapi.", normal: "Proses berpikir subjek selama tes berlangsung relatif stabil dan konsisten. Hasil mencerminkan kondisi psikologis yang akurat.", rendah: "Individu menunjukkan kejujuran yang tinggi, ketenangan emosional, dan mampu mengontrol diri dengan sangat baik selama asesmen." },
+        'K': { tinggi: "Terdapat mekanisme pertahanan diri yang sangat kaku. Subjek enggan mengakui kesulitan emosional, yang seringkali menghambat proses konsultasi atau terapi.", normal: "Menunjukkan keseimbangan antara kesadaran diri akan kekurangan dan kemampuan menjaga privasi emosional secara sehat.", rendah: "Terdapat indikasi otokritik yang tajam, kepuasan diri yang rendah, serta kemungkinan adanya perasaan tidak berdaya." },
+        'Hs': { tinggi: "Kecenderungan somatisasi yang signifikan; subjek cenderung memanifestasikan stres psikologis menjadi berbagai keluhan fisik meski tanpa dasar medis yang jelas.", normal: "Memiliki persepsi yang realistis terhadap fungsi tubuh dan kondisi kesehatan fisik secara umum.", rendah: "Subjek cenderung sangat praktis, memiliki toleransi stres fisik yang tinggi, and jarang memikirkan keluhan kesehatan ringan." },
+        'D': { tinggi: "Terindikasi adanya suasana perasaan depresif, penurunan energi psikis, pesimisme, serta hilangnya minat terhadap aktivitas sosial maupun personal.", normal: "Stabilitas emosional terpelihara dengan baik; memiliki optimisme yang sehat dalam menghadapi dinamika kehidupan.", rendah: "Menunjukkan gairah hidup yang sangat tinggi dan rasa percaya diri yang kuat, namun terkadang kurang peka terhadap situasi yang menuntut keseriusan." },
+        'Hy': { tinggi: "Subjek cenderung menggunakan mekanisme penyangkalan (denial) terhadap konflik dan sangat mengharapkan afirmasi sosial dari lingkungannya.", normal: "Mampu bersikap realistis, logis, dan memiliki kedewasaan emosional dalam menjalin hubungan interpersonal.", rendah: "Cenderung bersikap skeptis, kritis, dan mungkin sulit untuk mempercayai niat baik orang lain secara spontan." },
+        'Pd': { tinggi: "Kesulitan dalam internalisasi nilai-nilai sosial atau aturan. Terindikasi adanya pola impulsivitas serta konflik yang berulang dengan figur otoritas.", normal: "Mampu beradaptasi dengan norma sosial secara stabil dan menunjukkan tanggung jawab interpersonal yang memadai.", rendah: "Individu cenderung sangat patuh (submisif) dan mungkin mengalami hambatan dalam mengekspresikan kebutuhan pribadinya secara asertif." },
+        'Mf': { tinggi: "Subjek menunjukkan minat yang sangat luas dan sensitivitas estetika yang tinggi (Pria); atau pola perilaku yang sangat agresif, aktif, dan kompetitif (Wanita).", normal: "Memiliki minat dan pola perilaku yang sesuai dengan ekspektasi peran gender umum di masyarakat.", rendah: "Minat cenderung praktis dan tradisional (Pria); atau sangat submisif dan pasif dalam interaksi sosial (Wanita)." },
+        'Pa': { tinggi: "Peningkatan sensitivitas terhadap kritik, kecenderungan untuk merasa curiga, serta persepsi bahwa lingkungan bersikap tidak adil terhadap dirinya.", normal: "Kewaspadaan sosial berada pada level yang wajar; mampu menilai interaksi sosial secara objektif tanpa prasangka.", rendah: "Kurang peka terhadap dinamika sosial di sekitarnya dan terkadang cenderung bersikap kurang fleksibel dalam berpendapat." },
+        'Pt': { tinggi: "Manifestasi kecemasan yang bersifat menetap (obsessif), perfeksionisme tinggi, serta keragu-raguan yang menghambat efektivitas kerja.", normal: "Memiliki kemampuan manajemen stres yang baik, disiplin diri yang teratur, serta perencanaan hidup yang matang.", rendah: "Subjek sangat tegas dalam mengambil keputusan, memiliki kepercayaan diri yang tinggi, dan jarang merasa khawatir secara berlebihan." },
+        'Sc': { tinggi: "Adanya pola pikir yang unik atau tidak lazim. Subjek mungkin merasa terasing dari lingkungan sosial atau memiliki persepsi yang tidak konvensional terhadap realitas.", normal: "Memiliki orientasi realitas yang jernih, kemampuan adaptasi kognitif yang baik, serta proses berpikir yang logis.", rendah: "Berpikir secara sangat konkret dan praktis; kurang memiliki imajinasi atau kemampuan untuk memahami konsep-konsep abstrak secara mendalam." },
+        'Ma': { tinggi: "Level energi psikis berada pada titik puncak; bermanifestasi dalam bicara cepat, impulsivitas, serta banyaknya ide yang seringkali tidak tuntas eksekusinya.", normal: "Produktivitas kerja stabil dan energi psikis seimbang dengan tuntutan tanggung jawab harian.", rendah: "Terindikasi adanya penurunan motivasi atau inisiatif; subjek mungkin merasa cepat lelah atau kurang memiliki gairah dalam bertindak." },
+        'Si': { tinggi: "Kecenderungan introvert yang kuat; subjek merasa lebih nyaman dalam aktivitas mandiri atau dalam lingkup sosial yang sangat terbatas dan familiar.", normal: "Memiliki keterampilan sosial yang seimbang; mampu bergaul dengan baik namun tetap menghargai waktu untuk privasi diri.", rendah: "Kapasitas ekstrovert yang dominan; sangat menyukai interaksi sosial yang dinamis dan aktif mencari stimulasi dari lingkungan luar." }
+    };
+
+    const scales = [
+        {id:'L', n:'Lie Scale', k:0}, {id:'F', n:'Infrequency', k:0}, {id:'K', n:'Correction', k:0},
+        {id:'Hs', n:'Hypochondriasis', k:0.5}, {id:'D', n:'Depression', k:0}, {id:'Hy', n:'Hysteria', k:0},
+        {id:'Pd', n:'Psychopathic Dev.', k:0.4}, {id:'Mf', n:'Masculinity-Fem.', k:0}, {id:'Pa', n:'Paranoia', k:0},
+        {id:'Pt', n:'Psychasthenia', k:1.0}, {id:'Sc', n:'Schizophrenia', k:1.0}, {id:'Ma', n:'Hypomania', k:0.2}, {id:'Si', n:'Social Int.', k:0}
+    ];
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const lines = reader.result.split('\n');
+            let ans = {}, nama = "SUBJEK";
+            lines.forEach(l => {
+                const c = l.toUpperCase();
+                if(c.includes("NAMA")) nama = c.split(":")[1]?.trim() || "SUBJEK";
+                const m = c.match(/^(\d+)\.\s*(YA|TIDAK|X|T|A|B)/);
+                if(m) ans[parseInt(m[1])] = (['YA','X','T','A'].includes(m[2])) ? 'YA' : 'TIDAK';
+            });
+            renderUnifiedReport(ans, nama);
+        };
+        reader.readAsText(e.target.files[0]);
+    });
+
+    function renderUnifiedReport(ans, nama) {
+        let kRaw = 0; scoringKeys['K'].forEach(q => { if(ans[q] === 'YA') kRaw++; });
+        const tbody = document.getElementById('tableBody');
+        const narasiCont = document.getElementById('clinicalNarasi');
+        tbody.innerHTML = ""; narasiCont.innerHTML = "";
+        let labels = [], tVals = [], fT = 0, lT = 0;
+
+        scales.forEach(s => {
+            let ya = 0; scoringKeys[s.id].forEach(q => { if(ans[q] === 'YA') ya++; });
+            let tdk = scoringKeys[s.id].length - ya;
+            let kVal = s.k * kRaw;
+            let final = ya + kVal;
+            
+            // PERBAIKAN RUMUS T-SCORE SESUAI NORM_TABLE
+            let tScore = getTScore(s.id, final, currentGender);
+            
+            if(s.id === 'F') fT = tScore; if(s.id === 'L') lT = tScore;
+
+            labels.push(s.id); tVals.push(tScore);
+            let stat = tScore >= 65 ? "TINGGI" : (tScore <= 45 ? "RENDAH" : "NORMAL");
+            let clrClass = tScore >= 65 ? "row-high" : (tScore <= 45 ? "row-low" : "row-normal");
+            let clrCode = tScore >= 65 ? "var(--red)" : (tScore <= 45 ? "var(--blue)" : "var(--green)");
+
+            tbody.innerHTML += `<tr><td class="col-left">${s.n}</td><td>${ya}</td><td>${tdk}</td><td>${ya}</td><td>${kVal.toFixed(1)}</td><td>${final.toFixed(1)}</td><td style="background:#FFF9C4; font-weight:900; color:${clrCode}">${tScore}</td><td style="font-weight:700; color:${clrCode}">${stat}</td></tr>`;
+            
+            let txt = tScore >= 65 ? dbNarrative[s.id].tinggi : (tScore <= 45 ? dbNarrative[s.id].rendah : dbNarrative[s.id].normal);
+            narasiCont.innerHTML += `
+                <div class="interp-row">
+                    <div class="interp-label ${clrClass}">
+                        <h5>${s.id}: ${s.n}</h5>
+                        <div class="t-score">Skor T: ${tScore} (${stat})</div>
+                    </div>
+                    <div class="interp-content">
+                        <p>${txt}</p>
+                    </div>
+                </div>`;
+        });
+
+        // Clinical Pattern Analysis
+        let profile = {};
+        for (let i = 0; i < labels.length; i++) { profile[labels[i]] = tVals[i] || 0; }
+        const high = (x) => x >= 65;
+        let clinicalPattern = "";
+        if (high(profile.D) && high(profile.Pt)) clinicalPattern = "PROFIL DEPRESIF-ANSIETAS";
+        else if (high(profile.Pd) && high(profile.Ma)) clinicalPattern = "PROFIL IMPULSIF-EKSPANSIF";
+        else if (high(profile.Pa) && high(profile.Sc)) clinicalPattern = "PROFIL PARANOID FEATURES";
+        else if (high(profile.Hs) && high(profile.Hy)) clinicalPattern = "PROFIL SOMATISASI";
+        else clinicalPattern = "PROFIL RELATIF STABIL";
+
+        narasiCont.innerHTML = `<div style="padding:15px; background:#F8FAFC; font-weight:800; margin-bottom:10px; border-bottom: 2px solid var(--navy);">${clinicalPattern}</div>` + narasiCont.innerHTML;
+
+        // Validity Logic
+        const vB = document.getElementById('statusValiditas');
+        let validityText = "PROFIL VALID (SIAP INTERPRETASI)", vClass = "valid";
+        if (fT > 80) { validityText = "PROFIL TIDAK VALID (OVER-REPORTING)"; vClass = "invalid"; }
+        else if (lT > 75) { validityText = "PROFIL TIDAK VALID (DEFENSIF)"; vClass = "invalid"; }
+        else if (fT < 50 && lT > 70) { validityText = "RESPON CENDERUNG DEFENSIF"; vClass = "invalid"; }
+        vB.innerText = validityText; vB.className = "validity-banner " + vClass;
+
+        if(window.mC) window.mC.destroy();
+        window.mC = new Chart(document.getElementById('mmpiChart'), {
+            type: 'line',
+            data: { labels: labels, datasets: [{ data: tVals, borderColor: '#050533', borderWidth: 3, tension: 0, fill: false, pointRadius: 5, pointBackgroundColor: '#C5A059' }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 30, max: 100, grid: { color: c => c.tick.value === 65 ? 'red' : '#EDF2F7' } } } }
+        });
+
+        document.getElementById('outNama').innerText = nama;
+        document.getElementById('outJK').innerText = currentGender === 'L' ? 'LAKI-LAKI' : 'PEREMPUAN';
+        document.getElementById('outTgl').innerText = new Date().toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'});
+        document.getElementById('adminPanel').style.display = 'none';
+        document.querySelectorAll('.report-page').forEach(p => p.style.display = 'block');
+    }
+
+    // ================= STRICT LOGIC PER EXCEL =================
+    const NORM_TABLE = {
+        L: { L: {0:37,5:54,10:71,15:87}, P: {0:37,5:54,10:70,15:87} },
+        F: { L: {0:44,10:67,20:89,30:112}, P: {0:45,10:67,20:88,30:110} },
+        K: { L: {0:23,10:46,20:69,30:93}, P: {0:28,10:50,20:73,30:96} },
+        Hs: { L: {0:41,10:61,20:82,32:107}, P: {0:23,10:48,20:73,32:102} },
+        D: { L: {0:26,20:64,40:103,50:122}, P: {0:2,20:60,40:117,50:146} },
+        Hy: { L: {0:0,20:64,40:126,50:157}, P: {0:15,20:56,40:98,50:119} },
+        Pd: { L: {0:21,20:63,40:106,50:128}, P: {0:8,20:51,40:94,50:115} },
+        Mf: { L: {0:2,20:46,40:91,60:135}, P: {0:125,20:80,40:35,50:12} },
+        Pa: { L: {0:24,10:57,20:89,40:154}, P: {0:27,10:57,20:87,40:147} },
+        Pt: { L: {0:0,10:13,30:42,50:71}, P: {0:5,10:25,30:65,50:105} },
+        Sc: { L: {0:0,20:19,40:40,78:80}, P: {0:13,20:49,40:84,78:151} },
+        Ma: { L: {0:28,20:67,40:105,50:124}, P: {0:11,20:56,40:102,50:125} },
+        Si: { L: {0:27,20:47,40:67,70:97}, P: {0:24,20:46,40:68,70:100} }
+    };
+
+    function getTScore(scale, raw, gender) {
+        const table = NORM_TABLE[scale][gender];
+        raw = Math.round(raw);
+        if (table[raw] !== undefined) return table[raw];
+        const keys = Object.keys(table).map(Number).sort((a,b) => a-b);
+        if (raw <= keys[0]) return table[keys[0]];
+        if (raw >= keys[keys.length-1]) return table[keys[keys.length-1]];
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (raw > keys[i] && raw < keys[i+1]) {
+                const r1 = keys[i], r2 = keys[i+1], t1 = table[r1], t2 = table[r2];
+                return Math.round(t1 + (t2 - t1) * (raw - r1) / (r2 - r1));
+            }
+        }
+        return 50;
+    }
+</script>
+</body>
+</html>
