@@ -6,13 +6,15 @@
     <title>CAT KESEHATAN JIWA | Restricted Access</title>
     <style>
         body { font-family: 'Inter', sans-serif; background: #050533; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .lock-card { background: white; color: #333; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-width: 400px; }
+        .lock-card { background: white; color: #333; padding: 40px; border-radius: 20px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-width: 400px; width: 100%; box-sizing: border-box; }
         .status-badge { padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 12px; margin-bottom: 20px; display: inline-block; }
         .expired { background: #FEE2E2; color: #B91C1C; }
         .active { background: #DCFCE7; color: #166534; }
-        .btn-access { background: #C5A059; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: 800; width: 100%; text-transform: uppercase; margin-top: 20px; }
+        .input-password { width: 100%; padding: 12px; margin-top: 15px; border: 1px solid #CBD5E1; border-radius: 8px; box-sizing: border-box; font-size: 14px; text-align: center; }
+        .btn-access { background: #C5A059; color: white; border: none; padding: 15px 30px; border-radius: 8px; cursor: pointer; font-weight: 800; width: 100%; text-transform: uppercase; margin-top: 15px; }
         .btn-access:disabled { background: #CBD5E1; cursor: not-allowed; }
         .info { font-size: 11px; color: #64748B; margin-top: 15px; }
+        .error-msg { color: #B91C1C; font-size: 12px; margin-top: 8px; display: none; }
     </style>
 </head>
 <body>
@@ -22,69 +24,114 @@
     <h2 style="margin: 10px 0;">Sistem CAT KESWA</h2>
     <p id="msg">Memverifikasi lisensi perangkat dan masa aktif...</p>
     
-    <button id="entryBtn" class="btn-access" style="display:none;" onclick="enterSystem()">MASUK APLIKASI</button>
+    <!-- Input Password -->
+    <div id="authSection" style="display:none;">
+        <input type="password" id="passwordInput" class="input-password" placeholder="Masukkan Password Akses">
+        <div id="errorMsg" class="error-msg">Password salah atau tidak valid!</div>
+        <button id="entryBtn" class="btn-access" onclick="verifyPassword()">MASUK APLIKASI</button>
+    </div>
     
     <div class="info">
         ID Perangkat: <span id="deviceId">Memuat...</span><br>
-        Lisensi Berakhir: <b>07 Mei 2026</b>
+        Masa Aktif: <b id="expiryLabel">24 Jam dari Aktivasi</b>
     </div>
 </div>
 
 <script>
-    // KONFIGURASI
-    const EXPIRY_DATE = new Date('2028-05-07T23:59:59');
-    const MAX_DEVICES = 5;
+    // KONFIGURASI 50 PASSWORD DENGAN ANGKA BELAKANG ACAK (keswa00 - keswa50)
+    const VALID_PASSWORDS = [
+        "keswa14", "keswa38", "keswa02", "keswa45", "keswa19", 
+        "keswa50", "keswa07", "keswa23", "keswa11", "keswa33", 
+        "keswa04", "keswa41", "keswa28", "keswa00", "keswa49", 
+        "keswa15", "keswa26", "keswa09", "keswa37", "keswa21", 
+        "keswa44", "keswa03", "keswa30", "keswa18", "keswa47", 
+        "keswa06", "keswa35", "keswa12", "keswa40", "keswa24", 
+        "keswa01", "keswa48", "keswa16", "keswa32", "keswa08", 
+        "keswa43", "keswa20", "keswa10", "keswa36", "keswa27", 
+        "keswa05", "keswa46", "keswa22", "keswa13", "keswa39", 
+        "keswa29", "keswa17", "keswa34", "keswa25", "keswa42"
+    ];
+
     const REDIRECT_URL = 'fix2mmpi.html'; // Nama file MMPI Anda
 
     function getFingerprint() {
-        // Simple fingerprinting menggunakan data browser
         return btoa(navigator.userAgent + navigator.language + screen.width).substring(0, 12);
     }
 
     function checkAccess() {
-        const now = new Date();
         const badge = document.getElementById('statusBadge');
         const msg = document.getElementById('msg');
-        const btn = document.getElementById('entryBtn');
+        const authSection = document.getElementById('authSection');
         const devLabel = document.getElementById('deviceId');
+        const expiryLabel = document.getElementById('expiryLabel');
         
         const fingerprint = getFingerprint();
         devLabel.innerText = fingerprint;
 
-        // 1. Cek Expired
-        if (now > EXPIRY_DATE) {
-            badge.innerText = "LISENSI KADALUWARSA";
-            badge.className = "status-badge expired";
-            msg.innerText = "Masa berlaku trial 2 minggu telah habis. Silakan hubungi administrator.";
+        const now = new Date().getTime();
+        
+        // Ambil data sesi dari localStorage
+        let sessionData = JSON.parse(localStorage.getItem('keswa_session') || 'null');
+
+        if (sessionData) {
+            // Cek apakah masa aktif 24 jam sudah habis
+            if (now > sessionData.expiryTime) {
+                badge.innerText = "WAKTU HABIS (EXPIRED)";
+                badge.className = "status-badge expired";
+                msg.innerText = "Masa aktif 24 jam untuk perangkat ini telah berakhir.";
+                localStorage.removeItem('keswa_session'); // Bersihkan sesi
+                return;
+            }
+
+            // Jika perangkat berbeda dengan yang terdaftar pertama kali (Limit 1 Device)
+            if (sessionData.device !== fingerprint) {
+                badge.innerText = "AKSES DITOLAK";
+                badge.className = "status-badge expired";
+                msg.innerText = "Sistem ini dikunci hanya untuk 1 perangkat yang telah terdaftar.";
+                return;
+            }
+
+            // Jika masih dalam masa aktif dan perangkat sama
+            badge.innerText = "SESI AKTIF";
+            badge.className = "status-badge active";
+            msg.innerText = "Perangkat dikenali. Anda dapat langsung masuk.";
+            authSection.style.display = "block";
+            
+            // Format sisa waktu untuk info
+            let sisaJam = Math.ceil((sessionData.expiryTime - now) / (1000 * 60 * 60));
+            expiryLabel.innerText = `Tersisa sekitar ${sisaJam} jam`;
             return;
         }
 
-        // 2. Cek Limit Device (Simulasi via Cloud/Local)
-        // Catatan: Untuk akurasi 100%, limit device memerlukan Database.
-        // Ini adalah pengamanan sisi klien menggunakan localStorage.
-        let devices = JSON.parse(localStorage.getItem('registered_devices') || '[]');
-        
-        if (!devices.includes(fingerprint)) {
-            if (devices.length >= MAX_DEVICES) {
-                badge.innerText = "LIMIT PERANGKAT TERCAPAI";
-                badge.className = "status-badge expired";
-                msg.innerText = "Maaf, akses hanya diizinkan untuk 5 perangkat pertama.";
-                return;
-            } else {
-                devices.push(fingerprint);
-                localStorage.setItem('registered_devices', JSON.stringify(devices));
-            }
-        }
-
-        // 3. Akses Diberikan
-        badge.innerText = "AKSES DIIZINKAN";
+        // Jika belum ada sesi sama sekali, persilakan masukkan password untuk mengikat 1 device & mulai 24 jam
+        badge.innerText = "MENUNGGU AUTORISASI";
         badge.className = "status-badge active";
-        msg.innerText = "Perangkat terverifikasi. Anda memiliki akses hingga 07 Mei 2026.";
-        btn.style.display = "block";
+        msg.innerText = "Masukkan salah satu password valid untuk mengaktifkan akses 24 jam.";
+        authSection.style.display = "block";
     }
 
-    function enterSystem() {
-        window.location.href = REDIRECT_URL;
+    function verifyPassword() {
+        const inputVal = document.getElementById('passwordInput').value.trim();
+        const errorMsg = document.getElementById('errorMsg');
+        const fingerprint = getFingerprint();
+
+        if (VALID_PASSWORDS.includes(inputVal)) {
+            let sessionData = JSON.parse(localStorage.getItem('keswa_session') || 'null');
+            
+            // Jika belum ada sesi tersimpan, buat sesi baru berdurasi 24 jam untuk 1 device ini
+            if (!sessionData) {
+                const expiryTime = new Date().getTime() + (24 * 60 * 60 * 1000); // 24 Jam
+                sessionData = {
+                    device: fingerprint,
+                    expiryTime: expiryTime
+                };
+                localStorage.setItem('keswa_session', JSON.stringify(sessionData));
+            }
+
+            window.location.href = REDIRECT_URL;
+        } else {
+            errorMsg.style.display = "block";
+        }
     }
 
     window.onload = checkAccess;
